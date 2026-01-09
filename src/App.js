@@ -3,68 +3,52 @@ import "./App.css";
 import TaskForm from "./components/TaskForm";
 import TaskList from "./components/TaskList";
 
-const BASE_URL = "http://localhost:5000"; // Node backend
-
 function App() {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch tasks from backend
-  const fetchTasks = async () => {
-    try {
-      const res = await fetch(`${BASE_URL}/tasks`);
-      const data = await res.json();
-      setTasks(data);
-      setLoading(false);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
+  // Load tasks from localStorage
   useEffect(() => {
-    fetchTasks();
+    const storedTasks = JSON.parse(localStorage.getItem("tasks")) || [];
+    setTasks(storedTasks);
+    setLoading(false);
   }, []);
 
-  // Add new task
-  const addTask = async (text) => {
-    try {
-      const res = await fetch(`${BASE_URL}/tasks`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ task: text }),
-      });
-      const data = await res.json();
-      if (data.success) fetchTasks();
-    } catch (err) {
-      console.error(err);
-    }
+  const saveTasks = (updatedTasks) => {
+    setTasks(updatedTasks);
+    localStorage.setItem("tasks", JSON.stringify(updatedTasks));
   };
 
-  // Mark task completed
-  const completeTask = async (id) => {
-    try {
-      await fetch(`${BASE_URL}/tasks/${id}`, { method: "PUT" });
-      fetchTasks();
-    } catch (err) {
-      console.error(err);
-    }
+  const addTask = (text) => {
+    const newTask = { id: Date.now(), task: text, completed: false };
+    saveTasks([newTask, ...tasks]);
   };
 
-  // Delete task
-  const deleteTask = async (id) => {
-    try {
-      await fetch(`${BASE_URL}/tasks/${id}`, { method: "DELETE" });
-      fetchTasks();
-    } catch (err) {
-      console.error(err);
-    }
+  const completeTask = (id) => {
+    const updatedTasks = tasks.map((t) =>
+      t.id === id ? { ...t, completed: !t.completed } : t
+    );
+    saveTasks(updatedTasks);
+  };
+
+  const deleteTask = (id) => {
+    const updatedTasks = tasks.filter((t) => t.id !== id);
+    saveTasks(updatedTasks);
   };
 
   return (
     <div className="container">
       <h2>Task Tracker</h2>
       <TaskForm addTask={addTask} />
-      {loading ? <p>Loading tasks...</p> : <TaskList tasks={tasks} completeTask={completeTask} deleteTask={deleteTask} />}
+      {loading ? (
+        <p>Loading tasks...</p>
+      ) : (
+        <TaskList
+          tasks={tasks}
+          completeTask={completeTask}
+          deleteTask={deleteTask}
+        />
+      )}
     </div>
   );
 }
